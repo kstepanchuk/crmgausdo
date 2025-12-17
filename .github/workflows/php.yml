@@ -1,0 +1,37 @@
+name: PHP
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      COMPOSER_CACHE_DIR: ~/.composer/cache
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.COMPOSER_CACHE_DIR }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          extensions: mbstring, dom, curl, ctype, sqlite, sqlite3, pdo_sqlite
+          tools: composer
+
+      - name: Validate composer configuration
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --no-interaction
