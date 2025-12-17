@@ -21,6 +21,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Detect Laravel installation
+        id: detect
+        run: |
+          if [ -f artisan ]; then
+            echo "artisan=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "artisan=false" >> "$GITHUB_OUTPUT"
+            echo "Laravel entrypoint 'artisan' is missing; Laravel-specific checks will be skipped."
+          fi
+
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
@@ -41,6 +51,7 @@ jobs:
         run: composer install --no-progress --prefer-dist --no-interaction
 
       - name: Prepare environment
+        if: steps.detect.outputs.artisan == 'true'
         run: |
           cp .env.example .env
           php artisan key:generate --ansi
@@ -48,13 +59,22 @@ jobs:
           chmod -R 777 storage bootstrap/cache
 
       - name: Clear cached state
+        if: steps.detect.outputs.artisan == 'true'
         run: |
           php artisan config:clear
           php artisan route:clear
           php artisan view:clear
 
       - name: Run database migrations
+        if: steps.detect.outputs.artisan == 'true'
         run: php artisan migrate --force --no-interaction
 
       - name: Application diagnostics
+        if: steps.detect.outputs.artisan == 'true'
         run: php artisan about
+
+      - name: Missing Laravel scaffold
+        if: steps.detect.outputs.artisan != 'true'
+        run: |
+          echo "Skipping Laravel commands because the 'artisan' entrypoint was not found." \
+            "Ensure the repository contains a full Laravel application before enabling CI checks."
