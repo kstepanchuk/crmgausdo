@@ -2,6 +2,7 @@
   "name": "camp/procurement-crm",
   "description": "Procurement Requests CRM on Laravel 12 + Filament v3",
   "type": "project",
+  "license": "proprietary",
   "require": {
     "php": "^8.2",
     "laravel/framework": "^12.0",
