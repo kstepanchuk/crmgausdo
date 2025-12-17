@@ -8,16 +8,33 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_DEBUG: true
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /tmp/laravel.sqlite
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      COMPOSER_CACHE_DIR: ~/.composer/cache
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.COMPOSER_CACHE_DIR }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
           coverage: none
-          extensions: sqlite3
+          extensions: mbstring, dom, curl, ctype, sqlite, sqlite3, pdo_sqlite
           tools: composer
 
       - name: Install dependencies
@@ -27,16 +44,17 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --ansi
-          touch database/database.sqlite
+          touch $DB_DATABASE
+          chmod -R 777 storage bootstrap/cache
+
+      - name: Clear cached state
+        run: |
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
 
       - name: Run database migrations
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
         run: php artisan migrate --force --no-interaction
 
       - name: Application diagnostics
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
         run: php artisan about
